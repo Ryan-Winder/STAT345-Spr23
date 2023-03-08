@@ -13,6 +13,6 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 print("Hello")
 
-for(i in 1:5){ print(i)}
+for(i in -5:5){ print(i)}
 ```
 
