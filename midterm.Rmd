@@ -125,7 +125,8 @@ court +
   geom_point(data = GSW_shots_combined_years, aes(x = locationX, y = locationY, color = typeEvent), alpha = 0.4) +
   scale_color_manual(values = c("#1D428A","#FFC72C")) +
   labs(x = "", y = "", title = "Year: {yearSeason}",color = "Type of Shot") + 
-  facet_wrap(~yearSeason, nrow = 2)
+  facet_wrap(~yearSeason, nrow = 2) + 
+  theme_classic()
 ```
 
 
