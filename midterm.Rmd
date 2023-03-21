@@ -61,6 +61,8 @@ GSW_shots_year_2022 <- teams_shots(teams = "Golden State Warriors", seasons = 20
 
 GSW_shots_combined_years <- rbind(GSW_shots_year_2000, GSW_shots_year_2005, GSW_shots_year_2010,
                                   GSW_shots_year_2015, GSW_shots_year_2020, GSW_shots_year_2022)
+
+# this will make no difference
 ```
 
 ```{r, warning=FALSE}
