@@ -61,6 +61,7 @@ GSW_shots_year_2022 <- teams_shots(teams = "Golden State Warriors", seasons = 20
 
 GSW_shots_combined_years <- rbind(GSW_shots_year_2000, GSW_shots_year_2005, GSW_shots_year_2010,
                                   GSW_shots_year_2015, GSW_shots_year_2020, GSW_shots_year_2022)
+GSW_shots_change <- rbind(GSW_shots_year_2000, GSW_shots_year_2022)
 ```
 
 ```{r, warning=FALSE, include = FALSE}
@@ -80,7 +81,7 @@ first_graph
 
 ```{r}
 ##### found at https://gist.github.com/edkupfer/6354964
-### making a basketball court for the data
+### making a basketball court for the data with adjusted x-axis and y-axis to better fit the data of interest
 court <- ggplot(data = data.frame(x = 1, y = 1), aes(x = x * 10, y = y * 10+450)) +
    ###outside box:
 geom_path(data=data.frame(x=c(-25,-25,25,25,-25),y=c(-47,47,47,-47,-47)))+
@@ -111,8 +112,8 @@ geom_path(data=data.frame(x=c(-750:(-1)/1000,1:750/1000,750:1/1000,-1:-750/1000)
 geom_path(data=data.frame(x=c(-3,3),y=c(43,43)),lineend='butt')+
 geom_path(data=data.frame(x=c(-3,3),y=-c(43,43)),lineend='butt')+
    ###three-point line:
-geom_path(data=data.frame(x=c(-22,-22,-22000:(-1)/1000,1:22000/1000,22,22),y=c(47,47-169/12,41.75-sqrt(23.75^2-c(-22000:(-1)/1000,1:22000/1000)^2),47-169/12,47)),aes(x=x*10,y=y*10+430))+
-geom_path(data=data.frame(x=c(-22,-22,-22000:(-1)/1000,1:22000/1000,22,22),y=-c(47,47-169/12,41.75-sqrt(23.75^2-c(-22000:(-1)/1000,1:22000/1000)^2),47-169/12,47)),aes(x=x*10,y=y*10+430)) +
+geom_path(data=data.frame(x=c(-22,-22,-22000:(-1)/1000,1:22000/1000,22,22),y=c(47,47-169/12,41.75-sqrt(23.75^2-c(-22000:(-1)/1000,1:22000/1000)^2),47-169/12,47)),aes(x=x*10,y=y*10+418))+
+geom_path(data=data.frame(x=c(-22,-22,-22000:(-1)/1000,1:22000/1000,22,22),y=-c(47,47-169/12,41.75-sqrt(23.75^2-c(-22000:(-1)/1000,1:22000/1000)^2),47-169/12,47)),aes(x=x*10,y=y*10+418)) +
    ###fix aspect ratio to 1:1
 coord_fixed(ylim = c(0,500))
 court
@@ -126,6 +127,15 @@ court +
   facet_wrap(~yearSeason, nrow = 2) + 
   theme_classic()
 ```
+```{r}
+court + 
+  geom_point(data = GSW_shots_change, aes(x = locationX, y = locationY, color = typeEvent), alpha = 0.4) + 
+  scale_color_manual(values = c("#1D428A","#FFC72C")) +
+  labs(x = "", y = "", title = "Shooting Change Over the Years",color = "Type of Shot") + 
+  facet_wrap(yearSeason~typeEvent, nrow = 2) + 
+  theme_classic()
+```
+
 
 
 2. (30 points) Summarize the graphic/series of graphics into a digestible, bullet-point brief report for front-office staff. Some notes:
