@@ -1,0 +1,163 @@
+---
+title: "STAT 345 Midterm Project"
+author: "Ryan Winder"
+font: 12pt
+date: "Due March 31"
+output:
+  pdf_document: default
+  word_document: default
+  html_document: default
+---
+
+> "Our offense is like the Pythagorean Theorem. There is no answer!", _Shaquille O'Neal_
+
+
+## The Background
+
+Your role for the midterm project is that of data analyst intern at an NBA (professional basketball) team. Your direct supervisor (also part of the analytics team) has asked you to create a data visualization to illustrate how (or if) the team's shots have changed over time. After some initial clarifying questions, your supervisor confessed that they had seen some pretty cool shot charts at http://savvastjortjoglou.com/nba-shot-sharts.html and would like to extend the ideas a bit. 
+
+Your data for the midterm project may come from a variety of sources, including the NBA directly, as well as Basketball-Reference, HoopsHype, and others. There are several ways to access the data, but perhaps the simplest is through the `nbastatR` package, which serves as a wrapper (or set of helper functions) for these various data sources. There is a lot of potentially useful information that can be found using this package; unfortunately, the documentation is somewhat inconsistent. For example, the documentation at https://www.rdocumentation.org/packages/nbastatR/versions/0.1.110202031 is pretty well-formatted and easy to navigate, but the current function names have changed a bit (see `?nbastatR` and click "Index"). (If you use the nbastatR package, you'll want to install the package using the following code. There are other packages with this type of data, though.)
+
+```{r message=FALSE, warning=FALSE}
+library(devtools)
+devtools::install_github("abresler/nbastatR")
+library(nbastatR)
+```
+
+## The Tasks
+
+1. (30 points) Produce a graphic displaying the shot locations for a particular team over several years. Some notes:
+
+   - Colors should be chosen to reflect the team, if possible.
+   - There are likely many overlaid points -- handle this by either binning these by location, or use opacity.
+   - Incorporate information about whether the shot was made or not (shape, color, etc.).
+   - The graphic should be well-labeled, titled, etc.
+   - Start with a graph for a single year, then extend to several years. Up to 20 years of shot data is available. Either facet these by year or animate using the years.
+   - You'll want to figure out what the coordinates mean somehow. This might be through the documentation, but could also be determined using aspects of the data itself and the dimensions of an NBA court.
+    - If possible, try to put a basketball court on the background of the image (you'll need to scale it appropriately).
+
+```{r warning=FALSE, include = FALSE}
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(ggthemes)
+library(gganimate)
+library(purrr)
+Sys.setenv("VROOM_CONNECTION_SIZE" = 131072 * 2)
+```
+
+```{r warning=FALSE, include=FALSE}
+# Will be looking at the Golden State warriors
+#     nameTeam is Golden State Warriors, slugTeam = GSW, teamName = Warriors
+nba_teams()
+nba_teams_seasons()
+# gathering data to inspect
+GSW_shots_year_2000 <- teams_shots(teams = "Golden State Warriors", seasons = 2000)
+GSW_shots_year_2005 <- teams_shots(teams = "Golden State Warriors", seasons = 2005)
+GSW_shots_year_2010 <- teams_shots(teams = "Golden State Warriors", seasons = 2010)
+GSW_shots_year_2015 <- teams_shots(teams = "Golden State Warriors", seasons = 2015)
+GSW_shots_year_2020 <- teams_shots(teams = "Golden State Warriors", seasons = 2020)
+GSW_shots_year_2022 <- teams_shots(teams = "Golden State Warriors", seasons = 2022)
+
+GSW_shots_combined_years <- rbind(GSW_shots_year_2000, GSW_shots_year_2005, GSW_shots_year_2010,
+                                  GSW_shots_year_2015, GSW_shots_year_2020, GSW_shots_year_2022)
+```
+
+```{r, warning=FALSE}
+#### Plot of shots for one season for the Golden State Warriors
+
+# Golden State's blue is #1D428A 
+# the color for their golden yellow is #FFC72C
+first_graph <- ggplot(data=GSW_shots_year_2000, aes(x = locationX, y=locationY)) + 
+  geom_point(alpha = 0.4, aes(color = GSW_shots_year_2000$typeEvent)) + 
+  scale_color_manual(values = c("#1D428A","#FFC72C")) +
+  labs(x = "", y = "", color = "Type of Shot") +
+  xlim(-300,300) + 
+  ylim(-75,500) + 
+  ggtitle("GSW Shots for 2000")
+first_graph
+```
+
+```{r}
+### making a basketball court for the data
+court <- ggplot(data = data.frame(x = 1, y = 1), aes(x, y)) +
+   ###outside box:
+geom_path(data=data.frame(x=c(-25,-25,25,25,-25),y=c(-47,47,47,-47,-47)))+
+   ###halfcourt line:
+geom_path(data=data.frame(x=c(-25,25),y=c(0,0)))+
+   ###halfcourt semicircle:
+geom_path(data=data.frame(x=c(-6000:(-1)/1000,1:6000/1000),y=c(sqrt(6^2-c(-6000:(-1)/1000,1:6000/1000)^2))),aes(x=x,y=y))+
+geom_path(data=data.frame(x=c(-6000:(-1)/1000,1:6000/1000),y=-c(sqrt(6^2-c(-6000:(-1)/1000,1:6000/1000)^2))),aes(x=x,y=y))+
+   ###solid FT semicircle above FT line:
+geom_path(data=data.frame(x=c(-6000:(-1)/1000,1:6000/1000),y=c(28-sqrt(6^2-c(-6000:(-1)/1000,1:6000/1000)^2))),aes(x=x,y=y))+
+geom_path(data=data.frame(x=c(-6000:(-1)/1000,1:6000/1000),y=-c(28-sqrt(6^2-c(-6000:(-1)/1000,1:6000/1000)^2))),aes(x=x,y=y))+
+   ###dashed FT semicircle below FT line:
+geom_path(data=data.frame(x=c(-6000:(-1)/1000,1:6000/1000),y=c(28+sqrt(6^2-c(-6000:(-1)/1000,1:6000/1000)^2))),aes(x=x,y=y),linetype='dashed')+
+geom_path(data=data.frame(x=c(-6000:(-1)/1000,1:6000/1000),y=-c(28+sqrt(6^2-c(-6000:(-1)/1000,1:6000/1000)^2))),aes(x=x,y=y),linetype='dashed')+
+   ###key:
+geom_path(data=data.frame(x=c(-8,-8,8,8,-8),y=c(47,28,28,47,47)))+
+geom_path(data=data.frame(x=-c(-8,-8,8,8,-8),y=-c(47,28,28,47,47)))+
+   ###box inside the key:
+geom_path(data=data.frame(x=c(-6,-6,6,6,-6),y=c(47,28,28,47,47)))+
+geom_path(data=data.frame(x=c(-6,-6,6,6,-6),y=-c(47,28,28,47,47)))+
+   ###restricted area semicircle:
+geom_path(data=data.frame(x=c(-4000:(-1)/1000,1:4000/1000),y=c(41.25-sqrt(4^2-c(-4000:(-1)/1000,1:4000/1000)^2))),aes(x=x,y=y))+
+geom_path(data=data.frame(x=c(-4000:(-1)/1000,1:4000/1000),y=-c(41.25-sqrt(4^2-c(-4000:(-1)/1000,1:4000/1000)^2))),aes(x=x,y=y))+
+   ###rim:
+geom_path(data=data.frame(x=c(-750:(-1)/1000,1:750/1000,750:1/1000,-1:-750/1000),y=c(c(41.75+sqrt(0.75^2-c(-750:(-1)/1000,1:750/1000)^2)),c(41.75-sqrt(0.75^2-c(750:1/1000,-1:-750/1000)^2)))),aes(x=x,y=y))+
+geom_path(data=data.frame(x=c(-750:(-1)/1000,1:750/1000,750:1/1000,-1:-750/1000),y=-c(c(41.75+sqrt(0.75^2-c(-750:(-1)/1000,1:750/1000)^2)),c(41.75-sqrt(0.75^2-c(750:1/1000,-1:-750/1000)^2)))),aes(x=x,y=y))+
+   ###backboard:
+geom_path(data=data.frame(x=c(-3,3),y=c(43,43)),lineend='butt')+
+geom_path(data=data.frame(x=c(-3,3),y=-c(43,43)),lineend='butt')+
+   ###three-point line:
+geom_path(data=data.frame(x=c(-22,-22,-22000:(-1)/1000,1:22000/1000,22,22),y=c(47,47-169/12,41.75-sqrt(23.75^2-c(-22000:(-1)/1000,1:22000/1000)^2),47-169/12,47)),aes(x=x,y=y))+
+geom_path(data=data.frame(x=c(-22,-22,-22000:(-1)/1000,1:22000/1000,22,22),y=-c(47,47-169/12,41.75-sqrt(23.75^2-c(-22000:(-1)/1000,1:22000/1000)^2),47-169/12,47)),aes(x=x,y=y))+
+   ###fix aspect ratio to 1:1
+coord_fixed(ratio = 0.75,xlim = c(-25,25), ylim = c(-50,0))
+court
+```
+
+```{r}
+first_graph
+court +
+  geom_point(data = GSW_shots_combined_years, aes(x = locationX, y = locationY, color = typeEvent), alpha = 0.4) +
+  scale_color_manual(values = c("#1D428A","#FFC72C")) +
+  labs(x = "", y = "", title = "Year: {yearSeason}",color = "Type of Shot") + 
+  facet_wrap(~yearSeason, nrow = 2)
+```
+
+
+2. (30 points) Summarize the graphic/series of graphics into a digestible, bullet-point brief report for front-office staff. Some notes:
+
+   - The main body of the report should be very brief -- just the graphic(s) and the bullet-pointed list of findings, which should be short and clear.
+   - Include a more detailed explanation of these bullet points, for further reading by those interested. This section should follow the bullet-point section, but should be organized similarly for reference. 
+   - Your report to the front-office shouldn't include any code.
+   - This report should be generated using RMarkdown. However, the choice of output type (Word, PDF, or HTML) is up to you (you could even make slides if you want to). 
+   
+3. (30 points) Write and document clean, efficient, reproducible code. Some notes:
+
+   - This code will be viewed by your direct supervisor.
+   - The code file should include your code to gather, join, and clean the data; the code to generate the graphic(s) presented; and your commentary on the results (so, a single .rmd file, or an .rmd file that sources an .r file).
+   - Your code should be clean, organized, and reproducible. Remove unnecessary/scratch/exploratory code.
+   - Your code should be well commented. In particular, any decisions or judgement calls made in the analysis process should be explained/justified. Sections of code should be identified even if not functionalized (including purpose, data/argument inputs, analysis outputs).
+   
+4. (10 points) Above and Beyond. Explore the data a bit, and create a graphic that uses (or incorporates) different information than what was used above. Some notes:
+
+   - Create an additional graphic that incorporates at least one additional variable not previously used. The additional data should be drawn from a different dataset (function call) than the original graphic used. These two (or more) datasets may need to be joined appropriately.
+   - You can either add more information to the plot above, or create a different plot. 
+   - Formatting, labelling, etc. are all important here too.
+   - Adding marginal densities or other "bells and whistles" might offer additional insight.
+   - This graphic should be included at the end of the report (after the more detailed explanations). 
+   - You should include a brief description of the graphic (highlighting the different/additional information used).
+
+  
+## The Deliverables
+
+1. Upload your report and code file(s) to GitHub by 11:59am (noon) on Friday, March 31.
+2. Submit (on Canvas) your report, code, and link to your GitHub repository by 11:59am (noon) on Friday, March 31.
+  
+  
+  
+  
+
+
