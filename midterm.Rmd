@@ -156,8 +156,3 @@ court +
 1. Upload your report and code file(s) to GitHub by 11:59am (noon) on Friday, March 31.
 2. Submit (on Canvas) your report, code, and link to your GitHub repository by 11:59am (noon) on Friday, March 31.
   
-  
-  
-  
-
-
