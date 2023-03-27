@@ -18,9 +18,10 @@ Your role for the midterm project is that of data analyst intern at an NBA (prof
 
 Your data for the midterm project may come from a variety of sources, including the NBA directly, as well as Basketball-Reference, HoopsHype, and others. There are several ways to access the data, but perhaps the simplest is through the `nbastatR` package, which serves as a wrapper (or set of helper functions) for these various data sources. There is a lot of potentially useful information that can be found using this package; unfortunately, the documentation is somewhat inconsistent. For example, the documentation at https://www.rdocumentation.org/packages/nbastatR/versions/0.1.110202031 is pretty well-formatted and easy to navigate, but the current function names have changed a bit (see `?nbastatR` and click "Index"). (If you use the nbastatR package, you'll want to install the package using the following code. There are other packages with this type of data, though.)
 
-```{r message=FALSE, warning=FALSE}
+```{r message=FALSE, warning=FALSE, include = FALSE}
+### library(liberdate)
 library(devtools)
-devtools::install_github("abresler/nbastatR")
+#devtools::install_github("abresler/nbastatR")
 library(nbastatR)
 ```
 
@@ -58,10 +59,10 @@ GSW_shots_year_2010 <- teams_shots(teams = "Golden State Warriors", seasons = 20
 GSW_shots_year_2015 <- teams_shots(teams = "Golden State Warriors", seasons = 2015)
 GSW_shots_year_2020 <- teams_shots(teams = "Golden State Warriors", seasons = 2020)
 GSW_shots_year_2022 <- teams_shots(teams = "Golden State Warriors", seasons = 2022)
+years <- list(GSW_shots_year_2000, GSW_shots_year_2005, GSW_shots_year_2010, GSW_shots_year_2015, GSW_shots_year_2020, GSW_shots_year_2022)
 
-GSW_shots_combined_years <- rbind(GSW_shots_year_2000, GSW_shots_year_2005, GSW_shots_year_2010,
-                                  GSW_shots_year_2015, GSW_shots_year_2020, GSW_shots_year_2022)
-GSW_shots_change <- rbind(GSW_shots_year_2000, GSW_shots_year_2022)
+GSW_shots_combined_years <- rbind(GSW_shots_year_2000, GSW_shots_year_2005, GSW_shots_year_2020, GSW_shots_year_2022)
+GSW_shots_change <- rbind(years[[1]],years[[length(years)]])
 ```
 
 ```{r, warning=FALSE, include = FALSE}
@@ -119,23 +120,31 @@ coord_fixed(ylim = c(0,500))
 court
 ```
 
-```{r}
+```{r, warning=FALSE}
+# court +
+#   geom_point(data = GSW_shots_combined_years, aes(x = locationX, y = locationY, color = typeEvent), alpha = 0.1) +
+#   scale_color_manual(values = c("#1D428A","#FFC72C")) +
+#   labs(x = "", y = "", title = "Missed & Made Shots Throughout the Seasons",color = "Type of Shot") + 
+#   facet_wrap(~yearSeason, nrow = 2) + 
+#   theme_classic()
 court +
-  geom_point(data = GSW_shots_combined_years, aes(x = locationX, y = locationY, color = typeEvent), alpha = 0.4) +
+  geom_point(data = GSW_shots_combined_years, aes(x = locationX, y = locationY, color = typeEvent), alpha = 0.25) +
   scale_color_manual(values = c("#1D428A","#FFC72C")) +
-  labs(x = "", y = "", title = "Shots for the Season",color = "Type of Shot") + 
-  facet_wrap(~yearSeason, nrow = 2) + 
-  theme_classic()
-```
-```{r}
-court + 
-  geom_point(data = GSW_shots_change, aes(x = locationX, y = locationY, color = typeEvent), alpha = 0.4) + 
-  scale_color_manual(values = c("#1D428A","#FFC72C")) +
-  labs(x = "", y = "", title = "Shooting Change Over the Years",color = "Type of Shot") + 
-  facet_wrap(yearSeason~typeEvent, nrow = 2) + 
+  labs(x = "", y = "", title = "Missed & Made Shots Throughout {yearSeason}",color = "Type of Shot") + 
+  transition_states(yearSeason, transition_length = 0.25, state_length = 2) + 
+  enter_fade() +
+  exit_shrink() +
   theme_classic()
 ```
 
+```{r}
+court +
+  geom_point(data = GSW_shots_change, aes(x = locationX, y = locationY, color = typeEvent), alpha = 0.1) +
+  scale_color_manual(values = c("#1D428A","#FFC72C")) +
+  labs(x = "", y = "", title = "Shooting Change Over the Years",color = "Type of Shot") +
+  facet_wrap(yearSeason~typeEvent, nrow = 2) +
+  theme_classic()
+```
 
 
 2. (30 points) Summarize the graphic/series of graphics into a digestible, bullet-point brief report for front-office staff. Some notes:
