@@ -9,21 +9,98 @@ output:
   html_document: default
 ---
 
-> "Our offense is like the Pythagorean Theorem. There is no answer!", _Shaquille O'Neal_
+```{r message=FALSE, warning=FALSE, include = FALSE}
+devtools::install_github("abresler/nbastatR")
+library(nbastatR)
+library(ggplot2)
+library(ggthemes)
+library(gganimate)
+Sys.setenv("VROOM_CONNECTION_SIZE" = 131072 * 2)
+```
+
+```{r warning=FALSE, include=FALSE}
+#     Will be looking at the Golden State warriors
+# gathering data to inspect
+GSW_shots_year_2000 <- teams_shots(teams = "Golden State Warriors", seasons = 2000)
+GSW_shots_year_2005 <- teams_shots(teams = "Golden State Warriors", seasons = 2005)
+GSW_shots_year_2020 <- teams_shots(teams = "Golden State Warriors", seasons = 2020)
+GSW_shots_year_2022 <- teams_shots(teams = "Golden State Warriors", seasons = 2022)
+# combine the years to look at their change over time
+GSW_shots_combined_years <- rbind(GSW_shots_year_2000, GSW_shots_year_2005, GSW_shots_year_2020, GSW_shots_year_2022)
+# combine the first year we are looking at and the most recent year
+GSW_shots_change <- rbind(GSW_shots_year_2000,GSW_shots_year_2022)
+```
+
+ -  The data for this team goes further back
+    -  However looking at the changes in shots over a more recent period would be of greater interest
+ -  The GSW combined years is for visualizing the changes over time
+ -  Whereas, the GSW shots change is for visualizing the differnce between the first and last years of interest
+
+```{r, warning=FALSE}
+#### Understanding the plot of shots for one season of the Golden State Warriors
+# Golden State's blue is #1D428A 
+# Golden State's yellow is #FFC72C
+first_graph <- ggplot(data=GSW_shots_year_2000, aes(x = locationX, y=locationY - 500)) + # needed to bring the points down to were we can see them
+  geom_point(alpha = 0.4, aes(color = GSW_shots_year_2000$typeEvent)) +  # changing opacity and color
+  scale_color_manual(values = c("#1D428A","#FFC72C")) + # setting the colors to Golden State's colors
+  labs(x = "", y = "", color = "Type of Shot") +
+  xlim(-300,300) + 
+  ylim(-550,0) + 
+  ggtitle("GSW Shots without court during 2000")
+first_graph
+```
+
+ -  We can visualize the outline of the three point line from the shooting pattern
+ -  The greatest density of shots is right where we would expect the basket to be
+ -  The next areas of greatest density appears to be along the baseline
+ -  There are a handful of shots far beyond the outlined three point line
+    -  All of these except one are misses, indicating these are undesirable shots
+ -  The proportion of missed(yellow) appears to be slightly more prominent that made(blue) shots
+ 
+```{r, include = FALSE}
+# source in a R file for obtaining a court object
+source("CourtforMidterm.R")
+court <- courtplot() # setting the court object to court
+```
+
+```{r, warning=FALSE}
+# add to the court plot
+court +
+  geom_point(data = GSW_shots_combined_years, aes(x = locationX, y = locationY, color = typeEvent), alpha = 0.25) + # set data to the comnbined years of interest, and color the points to makes/misses
+  scale_color_manual(values = c("#1D428A","#FFC72C")) + # set the colors of the points to the colors of Golden State
+  labs(x = "", y = "", title = 'Missed & Made Shots during {closest_state}',color = "Type of Shot") + # make the x and y have no title, set the title of the plot to update depending on the year we are looking at, and update the title of the legend 
+  transition_states(yearSeason, transition_length = 0.25, state_length = 3) + # transition based on the year of the season, and view the season for 3 seconds, and take 0.25 seconds to switch to the next season
+  enter_fade() + # fade when the shots for the season show up
+  exit_shrink() + # shrink when the shots for the season go away
+  theme_classic() # set the theme to classic
+```
+
+ -  The areas of the greatest number of shots taken appears to change each season
+ -  The seasons of 2000 and 2005 have the largest number of shots scattered around inside the three point line that is not near the hoop
+    -  Season 2000 had the majority of shots along the baseline
+    -  Season 2005 had the majority of shots right next to the basket and started to expand to taking many three point shots
+ -  Seasons 2020 and 2022 had similar patters
+    -  The greatest density of shots is right next to the basket
+    -  The majority of the remaining shots being three pointers
+    -  Astonishingly fewer shots inside the three point line that is not near the basket
+
+```{r}
+# add to the court plot again
+court +
+  geom_point(data = GSW_shots_change, aes(x = locationX, y = locationY, color = typeEvent), alpha = 0.2) + # set the data to the shots change, the color to miss or make, and the opacity
+  scale_color_manual(values = c("#1D428A","#FFC72C")) + # set the colors for misses/makes to the Golden State colors
+  labs(x = "", y = "", title = "Shooting Change Over the Years",color = "Type of Shot") + # make sure the x and y axis have no title, set the overarching title, and set the legend title
+  facet_wrap(yearSeason~typeEvent, nrow = 2) + # make 4 graphs, based on the season(which there are two), and the type of shot(which is miss or make), and have two rows
+  theme_classic() # set theme to classic
+```
 
 
-## The Background
+
 
 Your role for the midterm project is that of data analyst intern at an NBA (professional basketball) team. Your direct supervisor (also part of the analytics team) has asked you to create a data visualization to illustrate how (or if) the team's shots have changed over time. After some initial clarifying questions, your supervisor confessed that they had seen some pretty cool shot charts at http://savvastjortjoglou.com/nba-shot-sharts.html and would like to extend the ideas a bit. 
 
 Your data for the midterm project may come from a variety of sources, including the NBA directly, as well as Basketball-Reference, HoopsHype, and others. There are several ways to access the data, but perhaps the simplest is through the `nbastatR` package, which serves as a wrapper (or set of helper functions) for these various data sources. There is a lot of potentially useful information that can be found using this package; unfortunately, the documentation is somewhat inconsistent. For example, the documentation at https://www.rdocumentation.org/packages/nbastatR/versions/0.1.110202031 is pretty well-formatted and easy to navigate, but the current function names have changed a bit (see `?nbastatR` and click "Index"). (If you use the nbastatR package, you'll want to install the package using the following code. There are other packages with this type of data, though.)
 
-```{r message=FALSE, warning=FALSE, include = FALSE}
-### library(liberdate)
-library(devtools)
-#devtools::install_github("abresler/nbastatR")
-library(nbastatR)
-```
 
 ## The Tasks
 
@@ -37,115 +114,6 @@ library(nbastatR)
    - You'll want to figure out what the coordinates mean somehow. This might be through the documentation, but could also be determined using aspects of the data itself and the dimensions of an NBA court.
     - If possible, try to put a basketball court on the background of the image (you'll need to scale it appropriately).
 
-```{r warning=FALSE, include = FALSE}
-library(tidyverse)
-library(dplyr)
-library(ggplot2)
-library(ggthemes)
-library(gganimate)
-library(purrr)
-Sys.setenv("VROOM_CONNECTION_SIZE" = 131072 * 2)
-```
-
-```{r warning=FALSE, include=FALSE}
-# Will be looking at the Golden State warriors
-#     nameTeam is Golden State Warriors, slugTeam = GSW, teamName = Warriors
-nba_teams()
-nba_teams_seasons()
-# gathering data to inspect
-GSW_shots_year_2000 <- teams_shots(teams = "Golden State Warriors", seasons = 2000)
-GSW_shots_year_2005 <- teams_shots(teams = "Golden State Warriors", seasons = 2005)
-GSW_shots_year_2010 <- teams_shots(teams = "Golden State Warriors", seasons = 2010)
-GSW_shots_year_2015 <- teams_shots(teams = "Golden State Warriors", seasons = 2015)
-GSW_shots_year_2020 <- teams_shots(teams = "Golden State Warriors", seasons = 2020)
-GSW_shots_year_2022 <- teams_shots(teams = "Golden State Warriors", seasons = 2022)
-years <- list(GSW_shots_year_2000, GSW_shots_year_2005, GSW_shots_year_2010, GSW_shots_year_2015, GSW_shots_year_2020, GSW_shots_year_2022)
-
-GSW_shots_combined_years <- rbind(GSW_shots_year_2000, GSW_shots_year_2005, GSW_shots_year_2020, GSW_shots_year_2022)
-GSW_shots_change <- rbind(years[[1]],years[[length(years)]])
-```
-
-```{r, warning=FALSE, include = FALSE}
-#### Understanding the plot of shots for one season for the Golden State Warriors
-# Golden State's blue is #1D428A 
-# the color for their golden yellow is #FFC72C
-first_graph <- ggplot(data=GSW_shots_year_2000, aes(x = locationX, y=locationY - 500)) + 
-  geom_point(alpha = 0.4, aes(color = GSW_shots_year_2000$typeEvent)) + 
-  scale_color_manual(values = c("#1D428A","#FFC72C")) +
-  labs(x = "", y = "", color = "Type of Shot") +
-  xlim(-300,300) + 
-  ylim(-550,0) + 
-  #scale_y_reverse() +
-  ggtitle("GSW Shots for 2000")
-first_graph
-```
-
-```{r}
-##### found at https://gist.github.com/edkupfer/6354964
-### making a basketball court for the data with adjusted x-axis and y-axis to better fit the data of interest
-court <- ggplot(data = data.frame(x = 1, y = 1), aes(x = x * 10, y = y * 10+450)) +
-   ###outside box:
-geom_path(data=data.frame(x=c(-25,-25,25,25,-25),y=c(-47,47,47,-47,-47)))+
-   ###halfcourt line:
-geom_path(data=data.frame(x=c(-25,25),y=c(0,0)))+
-   ###halfcourt semicircle:
-geom_path(data=data.frame(x=c(-6000:(-1)/1000,1:6000/1000),y=c(sqrt(6^2-c(-6000:(-1)/1000,1:6000/1000)^2))),aes(x=x*10,y=y*10+450))+
-geom_path(data=data.frame(x=c(-6000:(-1)/1000,1:6000/1000),y=-c(sqrt(6^2-c(-6000:(-1)/1000,1:6000/1000)^2))),aes(x=x*10,y=y*10+450))+
-   ###solid FT semicircle above FT line:
-geom_path(data=data.frame(x=c(-6000:(-1)/1000,1:6000/1000),y=c(28-sqrt(6^2-c(-6000:(-1)/1000,1:6000/1000)^2))),aes(x=x*10,y=y*10+450))+
-geom_path(data=data.frame(x=c(-6000:(-1)/1000,1:6000/1000),y=-c(28-sqrt(6^2-c(-6000:(-1)/1000,1:6000/1000)^2))),aes(x=x*10,y=y*10+450))+
-   ###dashed FT semicircle below FT line:
-geom_path(data=data.frame(x=c(-6000:(-1)/1000,1:6000/1000),y=c(28+sqrt(6^2-c(-6000:(-1)/1000,1:6000/1000)^2))),aes(x=x*10,y=y*10+450),linetype='dashed')+
-geom_path(data=data.frame(x=c(-6000:(-1)/1000,1:6000/1000),y=-c(28+sqrt(6^2-c(-6000:(-1)/1000,1:6000/1000)^2))),aes(x=x*10,y=y*10+450),linetype='dashed')+
-   ###key:
-geom_path(data=data.frame(x=c(-8,-8,8,8,-8),y=c(47,28,28,47,47)))+
-geom_path(data=data.frame(x=-c(-8,-8,8,8,-8),y=-c(47,28,28,47,47)))+
-   ###box inside the key:
-geom_path(data=data.frame(x=c(-6,-6,6,6,-6),y=c(47,28,28,47,47)))+
-geom_path(data=data.frame(x=c(-6,-6,6,6,-6),y=-c(47,28,28,47,47)))+
-   ###restricted area semicircle:
-geom_path(data=data.frame(x=c(-4000:(-1)/1000,1:4000/1000),y=c(41.25-sqrt(4^2-c(-4000:(-1)/1000,1:4000/1000)^2))),aes(x=x*10,y=y*10+450))+
-geom_path(data=data.frame(x=c(-4000:(-1)/1000,1:4000/1000),y=-c(41.25-sqrt(4^2-c(-4000:(-1)/1000,1:4000/1000)^2))),aes(x=x*10,y=y*10+450))+
-   ###rim:
-geom_path(data=data.frame(x=c(-750:(-1)/1000,1:750/1000,750:1/1000,-1:-750/1000),y=c(c(41.75+sqrt(0.75^2-c(-750:(-1)/1000,1:750/1000)^2)),c(41.75-sqrt(0.75^2-c(750:1/1000,-1:-750/1000)^2)))),aes(x=x*10,y=y*10+450))+
-geom_path(data=data.frame(x=c(-750:(-1)/1000,1:750/1000,750:1/1000,-1:-750/1000),y=-c(c(41.75+sqrt(0.75^2-c(-750:(-1)/1000,1:750/1000)^2)),c(41.75-sqrt(0.75^2-c(750:1/1000,-1:-750/1000)^2)))),aes(x=x*10,y=y*10+450))+
-   ###backboard:
-geom_path(data=data.frame(x=c(-3,3),y=c(43,43)),lineend='butt')+
-geom_path(data=data.frame(x=c(-3,3),y=-c(43,43)),lineend='butt')+
-   ###three-point line:
-geom_path(data=data.frame(x=c(-22,-22,-22000:(-1)/1000,1:22000/1000,22,22),y=c(47,47-169/12,41.75-sqrt(23.75^2-c(-22000:(-1)/1000,1:22000/1000)^2),47-169/12,47)),aes(x=x*10,y=y*10+418))+
-geom_path(data=data.frame(x=c(-22,-22,-22000:(-1)/1000,1:22000/1000,22,22),y=-c(47,47-169/12,41.75-sqrt(23.75^2-c(-22000:(-1)/1000,1:22000/1000)^2),47-169/12,47)),aes(x=x*10,y=y*10+418)) +
-   ###fix aspect ratio to 1:1
-coord_fixed(ylim = c(0,500))
-court
-```
-
-```{r, warning=FALSE}
-# court +
-#   geom_point(data = GSW_shots_combined_years, aes(x = locationX, y = locationY, color = typeEvent), alpha = 0.1) +
-#   scale_color_manual(values = c("#1D428A","#FFC72C")) +
-#   labs(x = "", y = "", title = "Missed & Made Shots Throughout the Seasons",color = "Type of Shot") + 
-#   facet_wrap(~yearSeason, nrow = 2) + 
-#   theme_classic()
-court +
-  geom_point(data = GSW_shots_combined_years, aes(x = locationX, y = locationY, color = typeEvent), alpha = 0.25) +
-  scale_color_manual(values = c("#1D428A","#FFC72C")) +
-  labs(x = "", y = "", title = "Missed & Made Shots Throughout {yearSeason}",color = "Type of Shot") + 
-  transition_states(yearSeason, transition_length = 0.25, state_length = 2) + 
-  enter_fade() +
-  exit_shrink() +
-  theme_classic()
-```
-
-```{r}
-court +
-  geom_point(data = GSW_shots_change, aes(x = locationX, y = locationY, color = typeEvent), alpha = 0.1) +
-  scale_color_manual(values = c("#1D428A","#FFC72C")) +
-  labs(x = "", y = "", title = "Shooting Change Over the Years",color = "Type of Shot") +
-  facet_wrap(yearSeason~typeEvent, nrow = 2) +
-  theme_classic()
-```
-
 
 2. (30 points) Summarize the graphic/series of graphics into a digestible, bullet-point brief report for front-office staff. Some notes:
 
@@ -153,7 +121,9 @@ court +
    - Include a more detailed explanation of these bullet points, for further reading by those interested. This section should follow the bullet-point section, but should be organized similarly for reference. 
    - Your report to the front-office shouldn't include any code.
    - This report should be generated using RMarkdown. However, the choice of output type (Word, PDF, or HTML) is up to you (you could even make slides if you want to). 
-   
+
+
+
 3. (30 points) Write and document clean, efficient, reproducible code. Some notes:
 
    - This code will be viewed by your direct supervisor.
