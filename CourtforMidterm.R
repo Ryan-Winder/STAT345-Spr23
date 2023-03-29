@@ -1,5 +1,9 @@
 ##### found at https://gist.github.com/edkupfer/6354964
 ### making a basketball court for the data with adjusted x-axis and y-axis to better fit the data of interest
+
+# input: none
+# output: returns a court ggplot object
+
 courtplot <- function() {
   court <- ggplot(data = data.frame(x = 1, y = 1), aes(x = x * 10, y = y * 10+450)) +
   ###outside box:
@@ -35,6 +39,7 @@ courtplot <- function() {
   geom_path(data=data.frame(x=c(-22,-22,-22000:(-1)/1000,1:22000/1000,22,22),y=-c(47,47-169/12,41.75-sqrt(23.75^2-c(-22000:(-1)/1000,1:22000/1000)^2),47-169/12,47)),aes(x=x*10,y=y*10+418)) +
   ###fix aspect ratio to 1:1
   coord_fixed(ylim = c(0,500)) +
+  # set axis labels to nothing
   labs(x = "", y = "")
   return (court)
 }
