@@ -4,43 +4,16 @@ author: "Ryan Winder"
 font: 12pt
 date: "Due March 31"
 output:
-  pdf_document: default
-  word_document: default
   html_document: default
+  word_document: default
+  pdf_document: default
 ---
 
-```{r, warning=FALSE}
-One_Season
+```{r, setup, include=FALSE}
+knitr::opts_chunk$set(out.width = '80%', collapse = TRUE, warning=FALSE, message=FALSE)
+library(tidyverse)
+library(png)
 ```
- -  Made shots are the blue points
- -  Missed shots are the yellow points
- -  The outline of the three point line can be visualized
- -  The greater the density in a location depicts the number of shots taken there
-   -  The greatest density for this season appears to be along the baseline
-```{r}
-Court
-```
- -  This court will be great for visualizing what we are looking at
- -  All the dimensions should be alligned to the shooting data
-```{r, warning=FALSE}
-Animated_Seasons
-```
- -  The shooting patterns appear to change season to season
- -  No huge difference from 2000 to 2005
- -  Big difference from 2005 to 2020
-   -  A far greater density of shots can be seen in season 2020 around the three point line
-   -  Far fewer shots taken inside the three point line and not near the basket
-   -  Both of the two notes prior are even more so noticeable in season 2022
- -  Over time, the three point shooting becomes more prominent
-```{r, warning=FALSE}
-Shooting_Difference
-```
- -  The densities of both shots made and missed during the same season are very similar
-   -  No locations on the court indicate a far greater density from shots made compared to shots missed or vice versa
-     -  Therefore, there does not appear to be any lucky or unlucky location on the court
- -  Each seasons missed and made shots have a great density near the basket
- -  Season 2000 has a far greater density of shots both missed and made inside the three point line
- -  Season 2022 has a far greater density of shots both missed and made beyond the three point line
 
 ```{r message=FALSE, warning=FALSE, include = FALSE}
 # nothing special going on here, loading in the data and the necessary libraries
@@ -49,6 +22,7 @@ library(nbastatR)
 library(ggplot2)
 library(ggthemes)
 library(gganimate)
+library(dplyr)
 Sys.setenv("VROOM_CONNECTION_SIZE" = 131072 * 2) # setting the correct connection
 ```
 
@@ -63,8 +37,8 @@ GSW_shots_combined_years <- rbind(GSW_shots_year_2000, GSW_shots_year_2005, GSW_
 # combine the first year we are looking at and the most recent year
 GSW_shots_change <- rbind(GSW_shots_year_2000,GSW_shots_year_2022)
 ```
-   The data for this team goes further back, however looking at the changes in shots over a more recent period would be of greater interest. The GSW combined years is for visualizing the changes over time; whereas, the GSW shots change is for visualizing the difference between the first and last years of interest
-```{r, warning=FALSE}
+
+```{r, warning=FALSE, include=FALSE}
 ### For reference, look back to the first plot above
 # Understanding the plot of shots for one season of the Golden State Warriors
 # Golden State's blue is #1D428A 
@@ -77,14 +51,14 @@ One_Season <- ggplot(data=GSW_shots_year_2000, aes(x = locationX, y=locationY - 
   ylim(-550,0) + 
   ggtitle("GSW Shots without court during 2000")
 ```
-    We can visualize the outline of the three point line from the shooting pattern on this plot. The greatest density of shots is right where we would expect the basket to be. The next areas of greatest density appears to be along the baseline, which is not what one would expect during the game today, indicating that we can expect to see large changes as we look into more recent seasons. There are a handful of shots far beyond the outlined three point line, where all of these except one are misses, indicating these are undesirable shots. The proportion of missed(yellow) shots appears to be slightly more prominent that made(blue) shots, which we would expect, because the average field goal percentage of recent NBA seasons is roughly 45%.
+
 ```{r, include = FALSE}
 # source in a R file for obtaining a court object
 source("CourtforMidterm.R")
 Court <- courtplot() # setting the court object to court
 ```
-   Reference the second plot above, which depicts the basketball court we will be adding the shots to. Also, the R file for making the court can be viewed at CourtforMidterm.R.
-```{r, warning=FALSE}
+
+```{r, warning=FALSE, include=FALSE}
 ### For reference, look back to the animation in the third plot above
 # add to the court plot
 Animated_Seasons <- Court +
@@ -96,67 +70,123 @@ Animated_Seasons <- Court +
   exit_shrink() + # shrink when the shots for the season go away
   theme_classic() # set the theme to classic
 ```
-    The areas of the greatest number of shots taken appears to change each season, other than a great density of shots taken right near the basket. The seasons of 2000 and 2005 have a large number of shots scattered around inside the three point line that is not right near the basket. Season 2000 had a large majority of shots running along the baseline, which is nowhere present in the plots of seasons 2020 and 2022. Season 2005 had the majority of shots right next to the basket and started to expand to taking many three point shots. Seasons 2020 and 2022 had similar patterns with the greatest density of shots being right next to the basket and the majority of the remaining shots being three pointers. Astonishingly fewer shots inside the three point line that is not near the basket compared to the seasons of 2000 and 2005, indicating that the Golden State Warriors view these as undesirable shots.
-```{r}
+
+```{r, include=FALSE}
 ### For reference, look back to the fourth plot of four plots
 # add to the court plot again
 Shooting_Difference <- Court +
-  geom_point(data = GSW_shots_change, aes(x = locationX, y = locationY, color = typeEvent), alpha = 0.2) + # set the data to the shots change, the color to miss or make, and the opacity
+  geom_point(data = GSW_shots_change, aes(x = locationX, y = locationY, color = typeEvent), alpha = 0.15) + # set the data to the shots change, the color to miss or make, and the opacity
   scale_color_manual(values = c("#1D428A","#FFC72C")) + # set the colors for misses/makes to the Golden State colors
   labs(x = "", y = "", title = "Shooting Change Over the Years",color = "Type of Shot") + # make sure the x and y axis have no title, set the overarching title, and set the legend title
   facet_wrap(yearSeason~typeEvent, nrow = 2) + # make 4 graphs, based on the season(which there are two), and the type of shot(which is miss or make), and have two rows
   theme_classic() # set theme to classic
 ```
 
+```{r, warning=FALSE, include=FALSE}
+FT_Wins <- teams_annual_stats(teams = "Golden State Warriors") %>%
+  filter(teamName == "Warriors") %>%
+  select(pctWins,pctFT,isConferenceChampion)
+```
+
+```{r}
+One_Season
+```
+<br>
+- Made shots are the blue points <br>
+- Missed shots are the yellow points <br>
+- The outline of the three point line can be visualized <br>
+- The greater the density in a location depicts that a greater number of shots were taken there <br>
+--- The greatest density for this season appears to be along the baseline <br>
+<br>
+```{r}
+Court
+```
+<br>
+- This court will be great for visualizing what we are looking at <br>
+- All the dimensions should be alligned to the shooting data <br>
+<br>
+```{r, warning=FALSE}
+Animated_Seasons
+```
+<br>
+- The shooting patterns appear to change season to season <br>
+- No huge difference from 2000 to 2005 <br>
+- Big difference from 2005 to 2020 <br>
+--- A far greater density of shots can be seen in season 2020 around the three point line <br>
+--- Far fewer shots taken inside the three point line and not near the basket <br>
+------ Both of the two notes prior are even more so noticeable in season 2022 <br>
+- Over time, the three point shooting has become more prominent <br>
+<br>
+```{r, warning=FALSE}
+Shooting_Difference
+```
+<br>
+- The densities are very similar for each plot of the same season <br>
+--- No locations on the court indicate a far greater density from shots made compared to shots missed or vice versa <br>
+------  Therefore, there does not appear to be any lucky or unlucky location on the court <br>
+- All plots have a great density near the basket <br>
+- Season 2000 has a far greater density of shots both missed and made inside the three point line <br>
+- Season 2022 has a far greater density of shots both missed and made beyond the three point line <br>
+<br> <br> <br> <br> <br>
+
+<div align = "center"><font size="4">Further Reading</font></div>
+<br>
+- The data for this team goes further back, however looking at the changes in shots over a more recent period is of greater interest <br>
+<br>
+First Plot of Season 2000: <br>
+- We can visualize the outline of the three point line from the shooting pattern on the first plot, which we can use that to better visualize by putting these points over a basketball court <br>
+- The greatest density of shots is right where we would expect the basket to be <br>
+--- The next areas of greatest density appears to be along the baseline, which is not what one would expect during the game today, indicating that we can expect to see large changes as we look into more recent seasons <br>
+- There are a handful of shots far beyond the outlined three point line <br>
+--- All of these except one are misses, indicating these are undesirable shots. <br>
+- The proportion of missed(yellow) shots appears to be slightly more prominent that made(blue) shots, which we would expect, because the average field goal percentage of recent NBA seasons is roughly 45%. <br>
+<br>
+<br>
+Animated Plot: <br>
+- The areas of the greatest number of shots taken appears to change each season, other than a great density of shots taken right near the basket <br>
+--- The seasons of 2000 and 2005 have a large number of shots scattered around inside the three point line that is not right near the basket <br>
+- Season 2000 had a large majority of shots running along the baseline, which is nowhere present in the plots of seasons 2020 and 2022 <br>
+- Season 2005 had the majority of shots right next to the basket and started to expand to taking many three point shots <br>
+--- Seasons 2020 and 2022 had similar patterns with the greatest density of shots being right next to the basket and the majority of the remaining shots being three pointers <br>
+------ Astonishingly fewer shots inside the three point line that is not near the basket compared to the seasons of 2000 and 2005. <br>
+<br> <br>
+Fourth plot of Shooting Change: <br>
+- The change in shooting patterns is very noticeable from these plots <br>
+- The density of shots inside the three point line that was not near the basket greatly transitioned to outside the three point line <br>
+--- From this, we can see that the Golden State Warriors now views three pointers as more valuable shots, and when a three is not being taken, getting to the basket is the next best thing <br>
+--- Also, not only are three pointers likely seen as more valuable by Golden State, the players have improved in shooting the three because in season 2000 only one shot far beyond the three point line was a make <br>
+------ Whereas in the season 2022, there are multiple made shots far beyond the three point line with roughly the same number of missed shots far beyond the three point line as season 2000 <br>
+- Goal for the players of Golden State <br>
+--- Take open three pointers <br>
+--- Try to get to the basket, if a shot is not open next to the basket, kick it back out for a three pointer <br>
+<br> <br> <br>
+<div align = "center"><font size="4">Extra Graphic</font></div> <br> <br>
+```{r, warning=FALSE, include = FALSE}
+avg_ft_avg <- mean(FT_Wins$pctFT) # the average of the averages of free throws for all seasons
+avg_win_avg <- mean(FT_Wins$pctWins) # the average of the percentage of wins for all seasons
+Golden_State_data <- ggplot(data=FT_Wins,aes(x = pctWins, y = pctFT)) + # assign new ggplot to a variable
+  geom_point(aes(color = FT_Wins$isConferenceChampion)) + # color the points based on if conference champion
+  scale_color_manual(values = c("#1D428A","#FFC72C")) + # set the colors to Golden State colors
+  labs(x = "Percentage of Wins", y = "Free throw Percentage", title = "Golden States' Seasons since 1945", color = "Conference Winners") + # set the labels
+  geom_smooth(method = "lm", formula = y ~ x, col = "white") + # add the regression line for this data, set the lines color to something easy to see
+  geom_hline(yintercept = avg_ft_avg, linetype = "dashed", col = "white") + # add in vertical line for the average free throws
+  geom_vline(xintercept = avg_win_avg, linetype = "dashed", col = "white") + # add in horizontal line for the average of wins for all seasons
+  theme_dark() # set the theme to dark, because it looks good with Golden States colors
+```
+
+```{r}
+Golden_State_data
+```
+<br>
+- The Linear Regression line shows the relationship between the two variables <br>
+--- Positive relationship, as Golden State has a higherer win percentage for a season, they have a higher free throw percentage, and vice versa <br>
+- Vertical Line: The average of the average wins for all seasons <br>
+- Horizontal Line: The average of the average of free throws for all seasons <br>
+- As you can see <br>
+--- There is only one occurrence of being conference winners both below the linear regression line, and below average of the free throw percentage line <br>
+--- Therefore, a higher free throw percentage than the linear regression line during a season will make Golden State much more likely to be conference winners <br>
+--- Every occurrence of being conference winners occurs when Golden State has a higher percentage of wins than the overall average of wins <br>
+------Therefore, in order for Golden State to stand a better chance of being conference winners, they need to end the season with a higher win percentage than the average of their overall wins <br>
+- This is the finding we would expect to see, however, it is interesting to see how large of an impact a high win percentage mixed with a high free throw percentage has on Golden State being the conference winners or not
 
 
-
-Your role for the midterm project is that of data analyst intern at an NBA (professional basketball) team. Your direct supervisor (also part of the analytics team) has asked you to create a data visualization to illustrate how (or if) the team's shots have changed over time. After some initial clarifying questions, your supervisor confessed that they had seen some pretty cool shot charts at http://savvastjortjoglou.com/nba-shot-sharts.html and would like to extend the ideas a bit. 
-
-Your data for the midterm project may come from a variety of sources, including the NBA directly, as well as Basketball-Reference, HoopsHype, and others. There are several ways to access the data, but perhaps the simplest is through the `nbastatR` package, which serves as a wrapper (or set of helper functions) for these various data sources. There is a lot of potentially useful information that can be found using this package; unfortunately, the documentation is somewhat inconsistent. For example, the documentation at https://www.rdocumentation.org/packages/nbastatR/versions/0.1.110202031 is pretty well-formatted and easy to navigate, but the current function names have changed a bit (see `?nbastatR` and click "Index"). (If you use the nbastatR package, you'll want to install the package using the following code. There are other packages with this type of data, though.)
-
-
-## The Tasks
-
-1. (30 points) Produce a graphic displaying the shot locations for a particular team over several years. Some notes:
-
-   - Colors should be chosen to reflect the team, if possible.
-   - There are likely many overlaid points -- handle this by either binning these by location, or use opacity.
-   - Incorporate information about whether the shot was made or not (shape, color, etc.).
-   - The graphic should be well-labeled, titled, etc.
-   - Start with a graph for a single year, then extend to several years. Up to 20 years of shot data is available. Either facet these by year or animate using the years.
-   - You'll want to figure out what the coordinates mean somehow. This might be through the documentation, but could also be determined using aspects of the data itself and the dimensions of an NBA court.
-    - If possible, try to put a basketball court on the background of the image (you'll need to scale it appropriately).
-
-
-2. (30 points) Summarize the graphic/series of graphics into a digestible, bullet-point brief report for front-office staff. Some notes:
-
-   - The main body of the report should be very brief -- just the graphic(s) and the bullet-pointed list of findings, which should be short and clear.
-   - Include a more detailed explanation of these bullet points, for further reading by those interested. This section should follow the bullet-point section, but should be organized similarly for reference. 
-   - Your report to the front-office shouldn't include any code.
-   - This report should be generated using RMarkdown. However, the choice of output type (Word, PDF, or HTML) is up to you (you could even make slides if you want to). 
-
-
-
-3. (30 points) Write and document clean, efficient, reproducible code. Some notes:
-
-   - This code will be viewed by your direct supervisor.
-   - The code file should include your code to gather, join, and clean the data; the code to generate the graphic(s) presented; and your commentary on the results (so, a single .rmd file, or an .rmd file that sources an .r file).
-   - Your code should be clean, organized, and reproducible. Remove unnecessary/scratch/exploratory code.
-   - Your code should be well commented. In particular, any decisions or judgement calls made in the analysis process should be explained/justified. Sections of code should be identified even if not functionalized (including purpose, data/argument inputs, analysis outputs).
-   
-4. (10 points) Above and Beyond. Explore the data a bit, and create a graphic that uses (or incorporates) different information than what was used above. Some notes:
-
-   - Create an additional graphic that incorporates at least one additional variable not previously used. The additional data should be drawn from a different dataset (function call) than the original graphic used. These two (or more) datasets may need to be joined appropriately.
-   - You can either add more information to the plot above, or create a different plot. 
-   - Formatting, labelling, etc. are all important here too.
-   - Adding marginal densities or other "bells and whistles" might offer additional insight.
-   - This graphic should be included at the end of the report (after the more detailed explanations). 
-   - You should include a brief description of the graphic (highlighting the different/additional information used).
-
-  
-## The Deliverables
-
-1. Upload your report and code file(s) to GitHub by 11:59am (noon) on Friday, March 31.
-2. Submit (on Canvas) your report, code, and link to your GitHub repository by 11:59am (noon) on Friday, March 31.
-  
