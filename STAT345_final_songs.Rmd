@@ -1,0 +1,217 @@
+---
+title: "STAT 345 Final Project - Over and Over and Over and Over"
+author: "STAT 345"
+output: html_document
+---
+
+1.  Your first task is to create a list of top songs, dating back to 1958 (when Billboard introduced it's Hot 100 yearly chart). You may want to start with just the yearly top song, but your work should be general enough to account for multiple songs per year. You may narrow your search to a particular genre if you like. You may use any website that provides this information, though you may try to find one that makes part 2 as simple as possible.
+
+2.  For the top songs in part 1, gather some basic information: artist, title, year, genre (if appropriate), length, and other variables you think might be informative (sales figures, etc.).
+
+3.  Find a lyric hosting service (such as www.azlyrics.com or www.songlyrics.com, though these aren't the only options) that provides full lyrics to songs. Ideally, the URLs for these songs follow a reproducible pattern. Write a function that can automatically capture these song lyrics for your top songs from part 1, and then gather the lyrics. Do your best to keep this function general, but you may need to write code for specific instances.
+
+4.  Create two measures of song repetitiveness. Write a function (or two) to measure song repetitiveness, and apply it to each of the songs from part 1. Suggestions for "repetitiveness" include (but are definitely not limited to): "Do songs repeat the same phrase frequently?" and "Do songs repeat their song title frequently"
+
+5.  Have songs become more repetitive over time? Summarize and visualize your repetitive measures from part 4.
+
+6.  (If possible) Extend your work to more songs! Consider more questions, like "Does genre matter?".
+
+```{r, message=FALSE}
+library(dplyr)
+library(tidyr)
+library(rvest)
+library(geniusr)
+library(rgenius)
+library(tidyverse)
+library(tidytext)
+library(ggplot2)
+library(knitr)
+library(stringr)
+```
+
+```{r, message=FALSE}
+years <- c(1959:2022)
+url <- "https://en.wikipedia.org/wiki/Billboard_Year-End_Hot_100_singles_of_"
+data <- data.frame(NULL)
+for(i in 1:length(years)) {
+  h <- read_html(paste(url, years[i], sep = ""))
+  nodes <- h %>% html_nodes("table")
+  year_data <- html_table(nodes[[1]]) %>% mutate(Year = years[i])
+  if(names(year_data)[3] == 'Artist(s)')
+    year_data2 <- year_data %>% select(-'Artist(s)')
+  names(year_data2)[1] <- "NO."
+  data <- rbind(data, year_data2)
+}
+```
+
+```{r}
+data
+data[6200:6401,1:3]
+```
+
+```{r}
+# information including the Artists for the top 1 song back to 1958
+url2 <- "https://pleasework.robbievance.net/every-billboard-hot-100-1-from-1958-to-2020/"
+h2 <- read_html(url2)
+nodes2 <- h2 %>% html_nodes("table")
+song_data <- html_table(nodes2[[1]])
+names(song_data)[1] <- "Year"
+names(song_data)[2] <- "Title"
+names(song_data)[3] <- "Artist"
+song_data <- song_data[-1,]
+
+data_to_add <- data.frame(
+  Year = c("2021","2022"),
+  Title = c("Levitating", "Heat Waves"),
+  Artist = c("Dua Lipa", "Glass Animals")
+)
+
+year_song_artist <- rbind(song_data,data_to_add)
+
+# Song plays, length, and earning all based on Spotify data alone
+source("Plays_Length.R")
+
+full_data <- cbind(year_song_artist, plays_length)
+
+full_data
+```
+
+```{r, warning=FALSE}
+library(ggplot2)
+mean_length <- mean(full_data$Length)
+sd_length <- sd(full_data$Length)
+
+x_vals <- seq(min(full_data$Length), max(full_data$Length), length = 100)
+y_vals <- dnorm(x_vals, mean = mean_length, sd = sd_length)
+y_vals_scaled <- y_vals * diff(range(full_data$Plays/1000000000)) / max(y_vals)
+
+df <- data.frame(x = x_vals, y = y_vals_scaled)
+
+ggplot(full_data, aes(x = Length, y = Plays/1000000000)) +
+  geom_point() +
+  labs(x = "Song Length", y = "Times Played (in Billions)", title = "Song Length Vs. Number of Plays") +
+  scale_y_continuous(labels = function(x) format(x, scientific = FALSE, big.mark = "", decimal.mark = ".")) + 
+  geom_line(data = df, aes(x = x, y = y), color = "#3E82F7") +
+  theme(plot.title = element_text(hjust = 0.5, size = 14, face = "bold", margin = margin(b = 20)))
+
+```
+
+```{r}
+# Sys.setenv(GENIUS_API_TOKEN = 'qmMHBUkGrFBTA2iepyCGN666n4fCxbvqGpm3BnCs6tq3HTrhOZKQ-zyoJ_OD3JSz')
+# 
+# df <- tibble(Lyrics = as.character(rep("NA", 65)))
+# #df <- data.frame(matrix(ncol=1, nrow=65))
+# lyrics <- NULL
+# str <- ""
+# 
+# #for(i in 2:nrow(full_data)) {
+# for(i in 2:15) {
+#   Sys.sleep(10)
+#   song_data <- search_song(full_data[i,2])
+#   tryCatch({
+#     lyrics <- get_lyrics_url(as.character(song_data[1, 3]))
+#     print(lyrics[1,])
+#     #if (!is.null(lyrics) && !("NA" %in% lyrics)) {
+#       # for (j in 1:nrow(lyrics)) {
+#       #   toAdd <- as.character(lyrics[j,"line"])
+#       #   str <- paste(str, toAdd, sep = " ")
+#       # }
+#       str <- paste(" ", lyrics$line, sep=" ", collapse = " ")
+#       print(str)
+#       # if(nrow(df) == 0) {
+#       #   df[1,1] = str
+#       # } else {
+#       #   df <- rbind(df, tibble(Lyrics = str))
+#       # }
+#       df[i,1] <- str
+#     #} else {
+#      # df <- rbind(df, tibble(Lyrics = "NA"))
+#     #}
+#   #}, error = function(e) {
+#   #  df <- rbind(df, tibble(Lyrics = "ERROR"))
+#   })
+#   # df <- rbind(df, tibble(Lyrics = "ERROR WITH TRYCATCH"))
+#   str <- ""
+# }
+# 
+# df
+```
+
+```{r, message=FALSE}
+previous_data <- read_csv("final_songs-1.csv")
+attach(previous_data)
+head(previous_data)
+
+Rows <- c(1, 31) # rows to set to NA to gather correct lyrics
+
+our_data <- previous_data %>%
+  filter(Title %in% data$Title) %>%
+  mutate(Lyrics = str_replace_all(Lyrics, "[\r\n]", "")) %>%
+  mutate(Lyrics = gsub("(?<=[a-z])(?=[A-Z])", " ", Lyrics, perl = TRUE)) # mainly fixes the lyrics, but there are instances where there are words that are all capitalized and fixed together, along with special characters and words fixed together
+
+
+
+our_data
+```
+
+
+
+
+
+
+```{r}
+df2 <- data_frame(Count = as.integer())
+
+title_regex <- "(?<=^|\\s)[\"']?(.*?)[\"']?\\s?-\\s?.*?(?=$|\\s[\"'])"
+
+for(i in 1:nrow(df)) {
+  count <- str_count(df[i, "Lyrics"], regex(title_regex, ignore_case = TRUE))
+  df2 <- rbind(df2, data.frame(count))
+}
+
+df2
+```
+
+
+
+```{r}
+library(rvest)
+library(stringr)
+url3 <- "https://www.songlyrics.com/"
+h3 <- read_html(url3)
+Artist <- full_data$Artist
+Title <- full_data$Title
+Year <- full_data$Year
+
+Artist1 <- str_replace_all(Artist, "Mr. ", "")
+Artist2 <- str_replace_all(Artist1, "Sgt. ", "")
+Artist3 <- str_replace_all(Artist2, " ", "-")
+Artist4 <- tolower(Artist3)
+
+Title1 <- str_replace_all(Title, "’", "")
+Title2 <- str_replace_all(Title1, " ", "-")
+Title3 <- str_replace_all(Title2, "‘", "")
+Title4 <- str_replace_all(Title3, ",", "")
+Title5 <- tolower(Title4)
+
+toAdd <- "-lyrics/"
+
+test <- "https://www.songlyrics.com/"
+test2 <- paste(test,Artist4[61], sep = "")
+test3 <- paste(test2,Title5[61], sep = "")
+test4 <- paste(test3, toAdd, sep = "")
+
+h <- read_html(test4)
+
+test_table <- h 
+nodes <- h %>% html_nodes("table")
+year_data <- html_table(nodes[[1]]) 
+
+#year_data
+for(i in 1:length(Artist4)) {
+  url4 <- paste(url3, Artist4[i], sep = "")
+  url5 <- paste(url4, Title4, sep = "")
+  url6 <- paste(url5, toAdd, sep = "")
+  h <- read_html(url6)
+}
+```
