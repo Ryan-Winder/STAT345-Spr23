@@ -135,6 +135,8 @@ ggplot(full_data, aes(x = Length, y = Plays/1000000000)) +
 # }
 # 
 # df
+
+# change
 ```
 
 ```{r, message=FALSE}
@@ -175,43 +177,43 @@ df2
 
 
 ```{r}
-library(rvest)
-library(stringr)
-url3 <- "https://www.songlyrics.com/"
-h3 <- read_html(url3)
-Artist <- full_data$Artist
-Title <- full_data$Title
-Year <- full_data$Year
-
-Artist1 <- str_replace_all(Artist, "Mr. ", "")
-Artist2 <- str_replace_all(Artist1, "Sgt. ", "")
-Artist3 <- str_replace_all(Artist2, " ", "-")
-Artist4 <- tolower(Artist3)
-
-Title1 <- str_replace_all(Title, "’", "")
-Title2 <- str_replace_all(Title1, " ", "-")
-Title3 <- str_replace_all(Title2, "‘", "")
-Title4 <- str_replace_all(Title3, ",", "")
-Title5 <- tolower(Title4)
-
-toAdd <- "-lyrics/"
-
-test <- "https://www.songlyrics.com/"
-test2 <- paste(test,Artist4[61], sep = "")
-test3 <- paste(test2,Title5[61], sep = "")
-test4 <- paste(test3, toAdd, sep = "")
-
-h <- read_html(test4)
-
-test_table <- h 
-nodes <- h %>% html_nodes("table")
-year_data <- html_table(nodes[[1]]) 
-
-#year_data
-for(i in 1:length(Artist4)) {
-  url4 <- paste(url3, Artist4[i], sep = "")
-  url5 <- paste(url4, Title4, sep = "")
-  url6 <- paste(url5, toAdd, sep = "")
-  h <- read_html(url6)
-}
+# library(rvest)
+# library(stringr)
+# url3 <- "https://www.songlyrics.com/"
+# h3 <- read_html(url3)
+# Artist <- full_data$Artist
+# Title <- full_data$Title
+# Year <- full_data$Year
+# 
+# Artist1 <- str_replace_all(Artist, "Mr. ", "")
+# Artist2 <- str_replace_all(Artist1, "Sgt. ", "")
+# Artist3 <- str_replace_all(Artist2, " ", "-")
+# Artist4 <- tolower(Artist3)
+# 
+# Title1 <- str_replace_all(Title, "’", "")
+# Title2 <- str_replace_all(Title1, " ", "-")
+# Title3 <- str_replace_all(Title2, "‘", "")
+# Title4 <- str_replace_all(Title3, ",", "")
+# Title5 <- tolower(Title4)
+# 
+# toAdd <- "-lyrics/"
+# 
+# test <- "https://www.songlyrics.com/"
+# test2 <- paste(test,Artist4[61], sep = "")
+# test3 <- paste(test2,Title5[61], sep = "")
+# test4 <- paste(test3, toAdd, sep = "")
+# 
+# h <- read_html(test4)
+# 
+# test_table <- h 
+# nodes <- h %>% html_nodes("table")
+# year_data <- html_table(nodes[[1]]) 
+# 
+# #year_data
+# for(i in 1:length(Artist4)) {
+#   url4 <- paste(url3, Artist4[i], sep = "")
+#   url5 <- paste(url4, Title4, sep = "")
+#   url6 <- paste(url5, toAdd, sep = "")
+#   h <- read_html(url6)
+# }
 ```
