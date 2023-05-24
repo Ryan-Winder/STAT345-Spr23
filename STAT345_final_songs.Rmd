@@ -1,22 +1,13 @@
 ---
 title: "STAT 345 Final Project - Over and Over and Over and Over"
-author: "STAT 345"
+author: "Ryan Winder"
+font: 12pt
+date: "Due May 10th"
 output: html_document
 ---
 
-1.  Your first task is to create a list of top songs, dating back to 1958 (when Billboard introduced it's Hot 100 yearly chart). You may want to start with just the yearly top song, but your work should be general enough to account for multiple songs per year. You may narrow your search to a particular genre if you like. You may use any website that provides this information, though you may try to find one that makes part 2 as simple as possible.
-
-2.  For the top songs in part 1, gather some basic information: artist, title, year, genre (if appropriate), length, and other variables you think might be informative (sales figures, etc.).
-
-3.  Find a lyric hosting service (such as www.azlyrics.com or www.songlyrics.com, though these aren't the only options) that provides full lyrics to songs. Ideally, the URLs for these songs follow a reproducible pattern. Write a function that can automatically capture these song lyrics for your top songs from part 1, and then gather the lyrics. Do your best to keep this function general, but you may need to write code for specific instances.
-
-4.  Create two measures of song repetitiveness. Write a function (or two) to measure song repetitiveness, and apply it to each of the songs from part 1. Suggestions for "repetitiveness" include (but are definitely not limited to): "Do songs repeat the same phrase frequently?" and "Do songs repeat their song title frequently"
-
-5.  Have songs become more repetitive over time? Summarize and visualize your repetitive measures from part 4.
-
-6.  (If possible) Extend your work to more songs! Consider more questions, like "Does genre matter?".
-
-```{r, message=FALSE}
+```{r message=FALSE, include=FALSE}
+# probably don't need all of these but oh well
 library(dplyr)
 library(tidyr)
 library(rvest)
@@ -27,156 +18,417 @@ library(tidytext)
 library(ggplot2)
 library(knitr)
 library(stringr)
+library(ggplot2)
+library(plotly)
+library(patchwork)
+library(gridExtra)
+library(spotifyr)
+
+# Song plays, length, and earning all based on Spotify data alone
+# earnings was not very useful for including since it is directly proportional to plays
+# also the rows to take out that don't have good lyrics to shorted this document
+source("Plays_Length.R")
 ```
 
-```{r, message=FALSE}
+```{r message=FALSE}
+
+#########################################
+
+# All code can be expected to be done by me, however code that was  
+# started on by another will be marked in the same way as this
+
+#########################################
+
+## only needed for comparing to the songs that are in the csv file provided by Professor Baumann
+# years that we are looking at
 years <- c(1959:2022)
+# url for gathering the songs
 url <- "https://en.wikipedia.org/wiki/Billboard_Year-End_Hot_100_singles_of_"
+# dataframe for storing the data
 data <- data.frame(NULL)
+# run through all of the years of interest
 for(i in 1:length(years)) {
+  # read in the html page
   h <- read_html(paste(url, years[i], sep = ""))
+  # gather the tables
   nodes <- h %>% html_nodes("table")
+  # catch the table of interest and add on the year
   year_data <- html_table(nodes[[1]]) %>% mutate(Year = years[i])
+  # ran into errors because not all tables held the artists
   if(names(year_data)[3] == 'Artist(s)')
+    # take out the artist column if it is there so all tables match
     year_data2 <- year_data %>% select(-'Artist(s)')
+  # set all first column titles to "NO." so all match and are specific
   names(year_data2)[1] <- "NO."
+  # combine to the dataframe
   data <- rbind(data, year_data2)
 }
-```
-
-```{r}
 data
-data[6200:6401,1:3]
 ```
 
-```{r}
+```{r message=FALSE, warning=FALSE}
+# data provided by Professor Baumann
+previous_data <- read_csv("final_songs-1.csv")
+# attach the column names
+attach(previous_data)
+# to add for reference purposes
+Row <- data.frame(Row = c(1:1195))
+
+# tidying the data so that the lyrics are better formatted
+our_data <- previous_data %>%
+  filter(Title %in% data$Title) %>% # only look at the songs in the "final_song-1.csv" file that were actually in the
+                                    # billboard top 100 songs, which is where the 'data' table from above is helpful
+  mutate(Lyrics = str_replace_all(Lyrics, "[\r\n]", "")) %>% # get rid of the unnecessary '\r' and '\n' instances
+  # mainly fixes the lyrics, but there are instances where there are words that are all capitalized and fixed together, along with special characters and words fixed together
+  mutate(Lyrics = gsub("(?<=[a-z])(?=[A-Z])", " ", Lyrics, perl = TRUE)) 
+
+# bind the row numbers to our data
+our_data <- cbind(Row, our_data)
+
+# get rid of the rows that hold bad lyric data, based on Rows object
+our_data2 <- subset(our_data, !row.names(our_data) %in% Rows)
+
+# get rid of unnecessary column
+our_data3 <- our_data2 %>%
+  select(-1)
+
+# another time to reference specific rows
+Row <- 1:836
+# bind the row column to our data
+our_data3 <- cbind(Row, our_data3)
+
+# get rid of previous title repeat column so I can add my own
+our_data4 <- our_data3 %>%
+  select(-9)
+
+# gets rid of the opening and closing quotes for each song title
+our_data4$Title <- gsub("^\"|\"$", "", our_data4$Title)
+
+# "Sleepwalk" is in the lyrics many times, however the song title is Sleep Walk
+# goes to show that there are definitely many more occurrences of the same time most likely
+our_data4[10,3] <- "Sleepwalk"
+
+our_data4
+```
+
+
+```{r, include=FALSE}
+# title repeat code
+
+# set title counter to 0
+title_count <- 0
+# make a blank data frame to add to
+df <- data.frame(Title_Repeats = integer())
+
+# run through all of the rows in our data frame holding the songs and lyrics
+for(i in 1:nrow(our_data4)) {
+  # grab the song title
+  song_title <- our_data4$Title[i]
+  # grab the lyrics
+  lyrics <- our_data4$Lyrics[i]
+  # find the number of times that the title is repeated in the code
+  title_count <- str_count(lyrics, song_title)
+  # add that to the data frame
+  df[i, "Title_Repeats"] <- title_count
+  # reset title counter
+  title_count <- 0
+}
+
+# bind that to our data table
+our_data4 <- cbind(our_data4, df)
+# couldn't seem to get rid of the first column for the life of me
+our_data4
+```
+
+<div align = "center"><font size="8">First Plot of Interest</font></div><br>
+
+
+```{r echo=FALSE, warning=FALSE}
+#########################################
+
+# Jaden gave a start on how to approach graphing the title repitition, can be viewed in the history in the Google doc
+
+#########################################
+
+# start a graph for the year and title repeats
+gg <- ggplot(our_data4, aes(x = Year, y = Title_Repeats, text = Title)) +
+  geom_point() +
+  stat_summary(fun.y = "mean", geom = "line", aes(group=1), col = "red") +      # follow the mean along the years as a line
+  labs(y = "Title Repeats", title = "Title Repetition in Song Lyrics") +        # set labels
+  theme(plot.title = element_text(hjust = 0.5, size = 14, face = "bold", margin = margin(b = 20)))  # adjust title of the graph
+
+# start a second graph, for showing a better line where no title repeats are not included
+gg2 <- ggplot(subset(our_data4, Title_Repeats > 0), aes(x = Year, y = Title_Repeats, text = Title)) +
+  geom_point() +
+  stat_summary(fun.y = "mean", geom = "line", aes(group=1), col = "red") +        # again, follow the mean along the years as a line
+  labs(y = "Title Repeats", title = "Title Repition when Repition was Found") +   # set labels
+  theme(plot.title = element_text(hjust = 0.5, size = 14, face = "bold", margin = margin(b = 20)))  # adjust the title of the graph
+
+# allow for each graph to show what song a data point is when you hover over it
+ggplotly(gg, tooltip = c("text"))
+ggplotly(gg2, tooltip = c("text"))
+```
+
+- The first shows that the majority of songs over the last 60 years have in general not had much repetition of the song title in the song lyrics <br>
+- The second graph takes out the songs with zero repetition <br>
+-- This graph shows much more variability throughout the years <br>
+-- Even though there is variability, there does not seem to be any sort of predictable or noticeable trend <br>
+-- Only three songs seemed to have more than 30 title repititions in the lyrics, which includes 'Jump', 'Dazzey Ducks', and 'Panda'.<br>
+-- The majority of songs resided in the 0 to 10 repetition range<br><br><br>
+
+```{r include=FALSE}
+# title length code
+
+# set title length counter to 1
+title_length <- 1
+# make an empty data frame
+df2 <- data.frame(Title_Length = integer())
+
+# run through all of the rows that are in the file provided
+# that match the top songs gathered in the beginning
+for(i in 1:nrow(our_data)) {
+  # gather song title
+  song_title <- our_data$Title[i]
+  # update title length counter by the number of spaces that are in the string
+  title_length <- title_length + str_count(song_title, "\\s")
+  # update to the data frame
+  df2[i, "Title_Length"] <- title_length
+  # reset title length counter
+  title_length <- 1
+}
+
+# bind this to our data table
+our_data <- cbind(our_data, df2)
+our_data
+```
+
+<div align = "center"><font size="8">Second Plot of Interest</font></div><br>
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# start a graph looking at the year and title length of all the data
+# no matter if lyrics were correct or not since those are not of interest here
+gg3 <- ggplot(our_data, aes(x = Year, y = Title_Length, text = Title)) +
+  stat_summary(fun.y = "mean", geom = "line", aes(group = 1)) +                 # follow the mean along the years
+  geom_smooth(method = "loess", se = FALSE, aes(group = 1), color = "blue") +   # set the line to be of a curve type
+  labs(y = "Title Length", title = "Length of Song Titles over Time") +         # set the labels
+  theme(plot.title = element_text(hjust = 0.5, size = 14, face = "bold", margin = margin(b = 20))) # adjust the graphs title
+gg3
+```
+
+- This graph was too see if there was some trend over the years for the length of song titles <br>
+- From the blue line, we can clearly see that there has been a decline since roughly the 1980s <br>
+- I thought we might see a decline, since shorter titles are easier to remember <br>
+-- As large of a decline as seen above was a bit of a shock <br>
+- There seems to be consistent jumps from lower to higher title length which was interesting to see <br><br><br>
+
+```{r, include = FALSE}
 # information including the Artists for the top 1 song back to 1958
 url2 <- "https://pleasework.robbievance.net/every-billboard-hot-100-1-from-1958-to-2020/"
+# read in the html page
 h2 <- read_html(url2)
+# gather the tables in the page
 nodes2 <- h2 %>% html_nodes("table")
+# grab the song data
 song_data <- html_table(nodes2[[1]])
+# rename the columns
 names(song_data)[1] <- "Year"
 names(song_data)[2] <- "Title"
 names(song_data)[3] <- "Artist"
+# take out the first column
 song_data <- song_data[-1,]
 
+# add in data that was not in the table
 data_to_add <- data.frame(
   Year = c("2021","2022"),
   Title = c("Levitating", "Heat Waves"),
   Artist = c("Dua Lipa", "Glass Animals")
 )
 
+# combine that datat that was not in the table
 year_song_artist <- rbind(song_data,data_to_add)
 
-# Song plays, length, and earning all based on Spotify data alone
-source("Plays_Length.R")
-
+# combine the data tables
 full_data <- cbind(year_song_artist, plays_length)
 
+# made towards the beginning stages to get an idea of trends of interest and get familiarized with the project
 full_data
 ```
 
-```{r, warning=FALSE}
-library(ggplot2)
+<div align = "center"><font size="8">Third Plot of Interest</font></div><br>
+
+```{r echo=FALSE, warning=FALSE}
+# mean length of top songs from 1959-2022
 mean_length <- mean(full_data$Length)
+# standard deviation
 sd_length <- sd(full_data$Length)
 
+# sequence of 100
 x_vals <- seq(min(full_data$Length), max(full_data$Length), length = 100)
+# finding the normal values for the y-axis
 y_vals <- dnorm(x_vals, mean = mean_length, sd = sd_length)
+# scaling to be more appropriate
 y_vals_scaled <- y_vals * diff(range(full_data$Plays/1000000000)) / max(y_vals)
 
+# make into a dataframe
 df <- data.frame(x = x_vals, y = y_vals_scaled)
 
+# beginning plot
 ggplot(full_data, aes(x = Length, y = Plays/1000000000)) +
   geom_point() +
-  labs(x = "Song Length", y = "Times Played (in Billions)", title = "Song Length Vs. Number of Plays") +
+  # set labels
+  labs(x = "Song Length (minutes)", y = "Times Played (in Billions)", title = "Song Length Vs. Number of Plays") +
+  # chatGPT knows what's going on here, not I
   scale_y_continuous(labels = function(x) format(x, scientific = FALSE, big.mark = "", decimal.mark = ".")) + 
+  # add the normal distribution curve
   geom_line(data = df, aes(x = x, y = y), color = "#3E82F7") +
+  # set theme and extra changes
   theme(plot.title = element_text(hjust = 0.5, size = 14, face = "bold", margin = margin(b = 20)))
 
 ```
 
-```{r}
+- The song length here is different from above, here it is the length in minutes of the song <br>
+- I was interested to see if there could be some trend spotted from this data <br>
+-- before adding a normal distribution in regards to the data, the shape of a normal distribution popped out to me <br>
+- With more data points a better trend could be seen <br>
+-- This was my intent, to gather more data to view this <br><br><br>
+
+```{r include=FALSE}
+# set environment variables for connecting to Spotify API
+Sys.setenv(SPOTIFY_CLIENT_ID = 'afaf0ffc070a4170b1e6d8679ee700e1')
+Sys.setenv(SPOTIFY_CLIENT_SECRET = '150115d828fa488c9dd713899c92b110')
+
+# get access token using variables from above
+access_token <- get_spotify_access_token()
+
+# get rid of the opening and closing quotes in the title column
+our_data$Title <- gsub("^\"|\"$", "", our_data$Title)
+
+# make a data frame to capture variables of interest
+df3 <- data.frame(Danceability = double(), Speechiness = double(), Acousticness = double(), Liveness = double(), Tempo = double())
+
+# run through all the rows in our_data, which has all of the titles including the songs that didn't have good lyrics
+for(i in 1:nrow(our_data)) {
+  # search up the song, and assign it to a variable
+  song_search <- search_spotify(as.character(our_data[i,2]), "track")
+  # grab the songs audio features and store in a variable
+  hold <- get_track_audio_features(song_search[1,7])
+  # get all of the data of interest
+  dance <- hold[1,1]; speech <- hold[1,6]; acoustic <- hold[1,7]; live <- hold[1,9]; tempo <- hold[1,11]
+  # assign all data for each song into the data table
+  df3[i,"Danceability"] = dance; df3[i,"Speechiness"] = speech; df3[i,"Acousticness"] = acoustic
+  df3[i,"Liveness"] = live; df3[i,"Tempo"] = tempo
+}
+
+# bind this with our_data table
+our_data <- cbind(our_data, df3)
+our_data
+```
+
+<div align = "center"><font size="8">Fourth Plot of Interest</font></div><br>
+
+```{r echo=FALSE}
+# get the means for each year for the four that are in percentages, tempo is not in percentages so doesn't turn out well when graphing
+dance_means <- tapply(our_data$Danceability, our_data$Year, mean)
+speech_means <- tapply(our_data$Speechiness, our_data$Year, mean)
+acoustic_means <- tapply(our_data$Acousticness, our_data$Year, mean)
+live_means <- tapply(our_data$Liveness, our_data$Year, mean)
+# make a vector of the years of interest again
+years <- c(1959:2020)
+
+# make a data table of the objects above
+df4 <- data.frame(Dance = dance_means, Speech = speech_means, Acoustic = acoustic_means, Live = live_means, Year = years)
+
+# get into tidy format
+df4_long <- df4 %>% pivot_longer(cols = -Year, names_to = "Variable", values_to = "Mean")
+
+# make a plot based on the data table above
+ggplot(df4_long, aes(x = Year, y = Mean, color = Variable)) +
+  # graph using lines
+  geom_line() + 
+  # set labels
+  labs(x = "Year", y = "Mean", title = "Mean Values over Time") +
+  # adjust the title of the graph
+  theme(plot.title = element_text(hjust = 0.5, size = 14, face = "bold", margin = margin(b = 20)))
+```
+
+- This data took a long time to gather, both in gathering it with correct code, and run time <br>
+-- However, it turned out pretty disappointing when most of the averages turned out to be the exact same <br>
+--- Indicating that the data is not very reliable <br>
+- The most variability in the data seen above is after 2010 <br>
+-- Shortly after 2010 there is a large spike in liveliness, and at the same time a large decline in speechiness <br>
+- No conclusion can be drawn from any of these variables over time <br>
+
+
+```{r, include=FALSE}
+# All of the failed coding attempts can be viewed below
+
 # Sys.setenv(GENIUS_API_TOKEN = 'qmMHBUkGrFBTA2iepyCGN666n4fCxbvqGpm3BnCs6tq3HTrhOZKQ-zyoJ_OD3JSz')
 # 
-# df <- tibble(Lyrics = as.character(rep("NA", 65)))
-# #df <- data.frame(matrix(ncol=1, nrow=65))
+# df <- tibble(Lyrics = as.character())
 # lyrics <- NULL
 # str <- ""
 # 
-# #for(i in 2:nrow(full_data)) {
-# for(i in 2:15) {
-#   Sys.sleep(10)
-#   song_data <- search_song(full_data[i,2])
+# for(i in 1:length(Rows)) {
+#   song_data <- search_song(our_data[Rows[i],3])
 #   tryCatch({
 #     lyrics <- get_lyrics_url(as.character(song_data[1, 3]))
 #     print(lyrics[1,])
-#     #if (!is.null(lyrics) && !("NA" %in% lyrics)) {
+#     if (!is.null(lyrics) && !("NA" %in% lyrics)) {
 #       # for (j in 1:nrow(lyrics)) {
 #       #   toAdd <- as.character(lyrics[j,"line"])
 #       #   str <- paste(str, toAdd, sep = " ")
 #       # }
-#       str <- paste(" ", lyrics$line, sep=" ", collapse = " ")
-#       print(str)
+#       str <- paste("line", sep = " ", collapse = " ")
 #       # if(nrow(df) == 0) {
 #       #   df[1,1] = str
 #       # } else {
 #       #   df <- rbind(df, tibble(Lyrics = str))
 #       # }
 #       df[i,1] <- str
-#     #} else {
-#      # df <- rbind(df, tibble(Lyrics = "NA"))
-#     #}
-#   #}, error = function(e) {
-#   #  df <- rbind(df, tibble(Lyrics = "ERROR"))
+#     } else {
+#      df <- rbind(df, tibble(Lyrics = "NA"))
+#     }
+#   }, error = function(e) {
+#   df <- rbind(df, tibble(Lyrics = "ERROR"))
 #   })
-#   # df <- rbind(df, tibble(Lyrics = "ERROR WITH TRYCATCH"))
+#   df <- rbind(df, tibble(Lyrics = "ERROR WITH TRYCATCH"))
 #   str <- ""
 # }
+
+# add <- function(x) {
+#   song_data <- search_song(x)
+#   lyrics <- get_lyrics_url(as.character(song_data[1,3]))
+#   str <- paste("line", sep = " ", collapse = " ")
+#   return(str)
+# }
+# add(our_data[Rows[1],3])
+
+# get_lyrics_search(our_data[1,4],our_data[1,3])
+```
+
+```{r, include=FALSE}
+# df2 <- data_frame(Count = as.integer())
 # 
-# df
-
-# change
-```
-
-```{r, message=FALSE}
-previous_data <- read_csv("final_songs-1.csv")
-attach(previous_data)
-head(previous_data)
-
-Rows <- c(1, 31) # rows to set to NA to gather correct lyrics
-
-our_data <- previous_data %>%
-  filter(Title %in% data$Title) %>%
-  mutate(Lyrics = str_replace_all(Lyrics, "[\r\n]", "")) %>%
-  mutate(Lyrics = gsub("(?<=[a-z])(?=[A-Z])", " ", Lyrics, perl = TRUE)) # mainly fixes the lyrics, but there are instances where there are words that are all capitalized and fixed together, along with special characters and words fixed together
-
-
-
-our_data
+# title_regex <- "(?<=^|\\s)[\"']?(.*?)[\"']?\\s?-\\s?.*?(?=$|\\s[\"'])"
+# 
+# for(i in 1:nrow(df)) {
+#   count <- str_count(df[i, "Lyrics"], regex(title_regex, ignore_case = TRUE))
+#   df2 <- rbind(df2, data.frame(count))
+# }
+# 
+# df2
 ```
 
 
 
+```{r, include=FALSE}
+#########################################
 
+# this was started on by Jaden, I tried to get it to work but did not have any luck
+# what Jaden provided can be viewed in the history on the Google doc
 
+#########################################
 
-```{r}
-df2 <- data_frame(Count = as.integer())
-
-title_regex <- "(?<=^|\\s)[\"']?(.*?)[\"']?\\s?-\\s?.*?(?=$|\\s[\"'])"
-
-for(i in 1:nrow(df)) {
-  count <- str_count(df[i, "Lyrics"], regex(title_regex, ignore_case = TRUE))
-  df2 <- rbind(df2, data.frame(count))
-}
-
-df2
-```
-
-
-
-```{r}
 # library(rvest)
 # library(stringr)
 # url3 <- "https://www.songlyrics.com/"
@@ -205,15 +457,44 @@ df2
 # 
 # h <- read_html(test4)
 # 
-# test_table <- h 
+# test_table <- h
 # nodes <- h %>% html_nodes("table")
-# year_data <- html_table(nodes[[1]]) 
+# year_data <- html_table(nodes[[1]])
 # 
-# #year_data
+# year_data
+#
 # for(i in 1:length(Artist4)) {
 #   url4 <- paste(url3, Artist4[i], sep = "")
 #   url5 <- paste(url4, Title4, sep = "")
 #   url6 <- paste(url5, toAdd, sep = "")
 #   h <- read_html(url6)
 # }
+```
+
+
+```{r, include=FALSE}
+# url3 <- "https://genius.com/"
+# toAdd <- "-lyrics"
+# 
+# ### no luck whatsoever
+# for(i in 1:length(Rows)) {
+#   Artist <- our_data[Rows[i],4] %>% 
+#     str_replace_all(., "Mr. ", "") %>%
+#     str_replace_all(., "Sgt. ", "") %>%
+#     str_replace_all(., " ", "-") %>%
+#     tolower()
+#   Title <- our_data[Rows[i],3] %>%
+#     str_replace_all(., "’", "") %>%
+#     str_replace_all(., "‘", "") %>%
+#     str_replace_all(., ",", "") %>%
+#     str_replace_all(., " ", "-") %>%
+#     tolower()
+#   url4 <- url3 %>%
+#     paste(., Artist, sep = "") %>%
+#     paste(.,Title, sep = "/") %>%
+#     paste(.,toAdd, sep = "")
+#   h <- read_html(url4)
+#   nodes <- h %>% html_nodes("table")
+# }
+
 ```
